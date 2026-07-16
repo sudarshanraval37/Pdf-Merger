@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="PDF Merger — Merge multiple PDF files instantly in your browser. No uploads, no servers, 100% private." />
+  <title>PDF Merger — Merge PDFs Instantly</title>
+
+  <!-- Google Fonts: Space Grotesk (headings) + Plus Jakarta Sans (body) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+
+  <!-- pdf-lib: in-browser PDF manipulation -->
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ===== AMBIENT BACKGROUND ORBS ===== -->
+  <div class="bg-orbs" aria-hidden="true">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
+  <!-- ===== LOADING OVERLAY ===== -->
+  <div id="loadingOverlay" class="loading-overlay" role="status" aria-live="polite" aria-hidden="true">
+    <div class="loading-content">
+      <div class="spinner-ring"></div>
+      <p class="loading-title">Merging PDFs</p>
+      <p id="loadingStatus" class="loading-status">Preparing files…</p>
+      <div class="progress-bar-wrap">
+        <div id="progressBar" class="progress-bar"></div>
+      </div>
+      <p id="progressPercent" class="progress-percent">0%</p>
+    </div>
+  </div>
+
+  <!-- ===== TOAST CONTAINER ===== -->
+  <div id="toastContainer" class="toast-container" aria-live="polite" aria-atomic="false"></div>
+
+  <!-- ===== HEADER ===== -->
+  <header class="site-header">
+    <div class="header-inner container">
+      <div class="logo" aria-label="PDF Merger home">
+        <span class="logo-icon" aria-hidden="true">⬡</span>
+        <span class="logo-text">PDF<strong>Merge</strong></span>
+      </div>
+
+      <nav class="header-actions" aria-label="Site actions">
+        <button class="btn-ghost" id="shortcutsBtn" aria-label="View keyboard shortcuts" title="Keyboard shortcuts (?)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="2" y="4" width="20" height="16" rx="2"/>
+            <path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M7 16h10"/>
+          </svg>
+          <span class="btn-label">Shortcuts</span>
+        </button>
+
+        <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark/light mode" title="Toggle theme">
+          <span class="theme-icon theme-icon--dark" aria-hidden="true">🌙</span>
+          <span class="theme-icon theme-icon--light" aria-hidden="true">☀️</span>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ===== KEYBOARD SHORTCUTS MODAL ===== -->
+  <div id="shortcutsModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="shortcutsTitle" aria-hidden="true">
+    <div class="modal-card">
+      <h2 id="shortcutsTitle" class="modal-title">Keyboard Shortcuts</h2>
+      <ul class="shortcuts-list" role="list">
+        <li><span class="kbd-group"><kbd>Ctrl</kbd><kbd>O</kbd></span><span>Open file picker</span></li>
+        <li><span class="kbd-group"><kbd>Ctrl</kbd><kbd>M</kbd></span><span>Merge PDFs</span></li>
+        <li><span class="kbd-group"><kbd>Del</kbd></span><span>Remove selected file</span></li>
+        <li><span class="kbd-group"><kbd>Esc</kbd></span><span>Close this dialog</span></li>
+      </ul>
+      <button class="btn btn-primary" id="shortcutsClose" aria-label="Close shortcuts dialog">Close</button>
+    </div>
+  </div>
+
+  <!-- ===== MAIN ===== -->
+  <main class="main-content container" id="main">
+
+    <!-- ── Hero ── -->
+    <section class="hero" aria-labelledby="heroTitle">
+      <h1 id="heroTitle" class="hero-title">
+        Merge PDFs<br /><span class="hero-accent">Instantly &amp; Privately</span>
+      </h1>
+      <p class="hero-sub">
+        Drag, drop, reorder — done. Everything runs entirely in your browser.<br />
+        <strong>No uploads. No servers. Zero tracking.</strong>
+        
+      </p>
+    </section>
+
+    <!-- ── Upload Zone ── -->
+    <section class="upload-section" aria-labelledby="uploadHeading">
+      <h2 id="uploadHeading" class="sr-only">Upload PDF files</h2>
+
+      <div
+        id="dropZone"
+        class="drop-zone"
+        role="button"
+        tabindex="0"
+        aria-label="Drop PDF files here or press Enter to open file picker"
+        aria-describedby="dropZoneHint"
+      >
+        <div class="drop-zone-inner">
+          <div class="drop-icon" aria-hidden="true">
+            <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+          </div>
+          <p class="drop-title">Drop PDF files here</p>
+          <p class="drop-sub" id="dropZoneHint">or <span class="drop-link">browse your files</span></p>
+          <span class="drop-badge">PDF only · Multiple files supported</span>
+        </div>
+      </div>
+
+      <!-- Hidden file input -->
+      <input
+        type="file"
+        id="fileInput"
+        accept=".pdf,application/pdf"
+        multiple
+        aria-label="Select PDF files"
+        class="visually-hidden"
+      />
+    </section>
+
+    <!-- ── Statistics Bar ── -->
+    <div class="stats-bar" id="statsBar" aria-live="polite" hidden>
+      <div class="stat-item">
+        <span class="stat-value" id="statFiles">0</span>
+        <span class="stat-label">Files</span>
+      </div>
+      <div class="stat-divider" aria-hidden="true"></div>
+      <div class="stat-item">
+        <span class="stat-value" id="statPages">—</span>
+        <span class="stat-label">Pages</span>
+      </div>
+      <div class="stat-divider" aria-hidden="true"></div>
+      <div class="stat-item">
+        <span class="stat-value" id="statSize">0 KB</span>
+        <span class="stat-label">Total size</span>
+      </div>
+    </div>
+
+    <!-- ── Controls Bar (search · sort · remove all) ── -->
+    <div class="controls-bar" id="controlsBar" hidden>
+      <div class="search-wrap">
+        <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <label for="searchInput" class="sr-only">Search files by name</label>
+        <input
+          type="search"
+          id="searchInput"
+          class="search-input"
+          placeholder="Search files…"
+          aria-label="Search uploaded files by name"
+        />
+      </div>
+
+      <div class="controls-right">
+        <label for="sortSelect" class="sr-only">Sort files</label>
+        <select id="sortSelect" class="sort-select" aria-label="Sort files by">
+          <option value="order">Upload order</option>
+          <option value="name">Name A–Z</option>
+          <option value="size">Largest first</option>
+          <option value="time">Newest first</option>
+        </select>
+
+        <button class="btn btn-danger-ghost" id="removeAllBtn" aria-label="Remove all uploaded files">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+            <path d="M10 11v6M14 11v6M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+          </svg>
+          Remove all
+        </button>
+      </div>
+    </div>
+
+    <!-- ── PDF File List ── -->
+    <section aria-labelledby="listHeading" id="pdfListSection" hidden>
+      <h2 id="listHeading" class="sr-only">Uploaded PDFs — drag to reorder</h2>
+      <ul
+        id="pdfList"
+        class="pdf-list"
+        role="list"
+        aria-label="Uploaded PDF files. Drag items to reorder."
+      ></ul>
+      <p id="noResultsMsg" class="no-results" hidden>No files match your search.</p>
+    </section>
+
+    <!-- ── Merge Section ── -->
+    <section class="merge-section" id="mergeSection" hidden aria-labelledby="mergeHeading">
+      <h2 id="mergeHeading" class="sr-only">Merge and download</h2>
+
+      <div class="filename-row">
+        <label for="outputFilename" class="filename-label">Output filename</label>
+        <div class="filename-input-wrap">
+          <input
+            type="text"
+            id="outputFilename"
+            class="filename-input"
+            value="Merged-PDF"
+            aria-label="Output PDF filename without extension"
+            spellcheck="false"
+            maxlength="100"
+          />
+          <span class="filename-ext" aria-hidden="true">.pdf</span>
+        </div>
+      </div>
+
+      <button
+        id="mergeBtn"
+        class="btn btn-primary btn-merge"
+        disabled
+        aria-disabled="true"
+        aria-label="Merge all PDFs and download the result"
+        title="Ctrl + M"
+      >
+        <svg class="btn-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M8 6H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-3"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+          <polyline points="16 11 12 15 8 11"/>
+        </svg>
+        Merge &amp; Download
+      </button>
+
+      <p class="merge-hint" id="mergeHint" aria-live="polite">Add at least 2 PDF files to enable merging.</p>
+    </section>
+
+  </main>
+
+  <section class="developer-card">
+
+    <div class="developer-photo">
+        <!-- Apna photo yahan rakho -->
+        <img src="assets/sudarshan.jpeg" alt="Sudarshan Raval">
+    </div>
+
+    <div class="developer-content">
+
+        <span class="developer-tag">
+            👨‍💻 Developer
+        </span>
+
+        <h2>Sudarshan Raval</h2>
+
+        <p>
+            Passionate Frontend Web Developer focused on creating fast,
+            beautiful and user-friendly web applications using HTML,
+            CSS and JavaScript.
+        </p>
+
+        <div class="developer-tech">
+            <span>HTML5</span>
+            <span>CSS3</span>
+            <span>JavaScript</span>
+            <span>Motion Graphics Artist</span>
+            <span>Video Editing</span>
+        </div>
+
+        <div class="developer-buttons">
+
+            <a href="https://github.com/sudarshanraval37" target="_blank">
+                <i class="fab fa-github"></i>
+                GitHub
+            </a>
+
+            <a href="https://www.linkedin.com/in/sudarshan-kumar-601185300/" target="_blank">
+                <i class="fab fa-linkedin"></i>
+                LinkedIn
+            </a>
+
+            <a href="https://www.instagram.com/_ravvall_/">
+                <i class="fas fa-envelope"></i>
+                Instagram
+            </a>
+
+        </div>
+
+    </div>
+
+</section>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <p class="footer-copy">
+        Everything runs in your browser &mdash; <strong>zero data leaves your device</strong>
+      </p>
+      <p class="footer-lib">
+        Powered by <a href="https://pdf-lib.js.org/" target="_blank" rel="noopener noreferrer">pdf-lib</a>
+      </p>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
